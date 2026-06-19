@@ -1,5 +1,6 @@
 package com.thpl.naviagtion3demo.utils
 
+
 object FuzzyLogic {
 
     // Returns true if the name matches the query with roughly 40% similarity allowance
