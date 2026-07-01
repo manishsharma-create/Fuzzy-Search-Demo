@@ -1,5 +1,6 @@
-package com.thpl.naviagtion3demo.utils
+package com.thpl.naviagtion3demo.utils.unusecode
 
+/*
 import org.apache.commons.codec.language.Metaphone
 import org.apache.commons.codec.language.Soundex
 import org.apache.commons.text.similarity.JaroWinklerSimilarity
@@ -277,4 +278,4 @@ object ApacheMetaphone : FuzzyAlgorithm {
         val code2 = metaphone.metaphone(s2)
         return if (code1 == code2) 1.0 else 0.0
     }
-}
+}*/

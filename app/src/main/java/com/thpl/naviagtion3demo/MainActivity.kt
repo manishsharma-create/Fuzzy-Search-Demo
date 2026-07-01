@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
             }
         }*/
 
-       val obj = Demo()
+        val obj = Demo()
         obj.main()
     }
 

@@ -1,6 +1,8 @@
-package com.thpl.naviagtion3demo
+package com.thpl.naviagtion3demo.utils.unusecode
 
-import android.annotation.SuppressLint
+// we are not work with this code so currently comment all of related things with this code
+
+/*import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -33,10 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thpl.naviagtion3demo.utils.FuzzyLogic
 
-/**
+*//**
  * SCREEN 1: Simple Version (The one previously uncommented)
  * Uses default FuzzyLogic for similarity calculation.
- */
+ *//*
 @Composable
 fun SimpleFuzzySearchScreen(
     modifier: Modifier = Modifier,
@@ -98,10 +100,10 @@ fun SimpleFuzzySearchScreen(
     }
 }
 
-/**
+*//**
  * SCREEN 2: Advanced Version (The one previously commented)
  * Uses the dynamic algorithm selector (Dropdown).
- */
+ *//*
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("DefaultLocale")
 @Composable
@@ -199,4 +201,4 @@ fun AdvancedFuzzySearchScreen(
             }
         }
     }
-}
+}*/

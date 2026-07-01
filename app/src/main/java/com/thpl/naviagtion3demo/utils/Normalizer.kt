@@ -108,9 +108,14 @@ class NameFieldMatcher(
         }
 
         // Prefix bonus: if the record starts with the query, small boost.
-        // Catches incremental typing: "Sur" → "Suresh"
-        if (recordToken.startsWith(queryToken) && queryToken.length >= 2) {
-            score = minOf(1.0, score + 0.05)
+        // Catches incremental typing: "Sur" → "Suresh".
+        // Skip when tokens are exactly equal (exact already = 1.0) and cap below
+        // 1.0 so an exact token always outranks a prefixed-but-different token
+        // (keeps "Vikas Sharma" above the phonetic variant "Vikash Sharma").
+        if (recordToken != queryToken && recordToken.startsWith(queryToken) &&
+            queryToken.length >= 2
+        ) {
+            score = minOf(0.99, score + 0.05)
         }
 
         return score
@@ -253,13 +258,28 @@ class EmailFieldMatcher(
 
         if (normRecord.isEmpty() || normQuery.isEmpty()) return 0.0
 
-        // If query doesn't contain '@', match against full email as substring
+// If query doesn't contain '@', this is a username/domain token or a
+        // word that happens to appear in an email — NOT an email-shaped query.
         if (!normQuery.contains("@")) {
-            return if (normRecord.contains(normQuery)) 0.9 else {
-                val maxLen = maxOf(normRecord.length, normQuery.length)
-                val dist = levenshtein.apply(normRecord, normQuery)
-                (maxLen - dist).toDouble() / maxLen.toDouble()
-            }
+            // Multi-word, non-email query (e.g. "Vikas Sharma"): email field
+            // should not pretend to match it. Spurious Levenshtein scores here
+            // are pure noise that pollutes ranking of name searches.
+            if (normQuery.contains(" ")) return 0.0
+
+            // Single token: a real email fragment is a substring of the address.
+            if (normRecord.contains(normQuery)) return 0.9
+
+            // Fuzzy fragment (username typo like "shalurathore187") only makes
+            // sense when the query and the address are length-comparable; without
+            // this guard, any short query vs a long email yields ~minLen/maxLen ≈
+            // 0.45 just from the length-difference term of Levenshtein, leaking
+            // unrelated text (e.g. "abcdefghxyz") through the threshold.
+            val lenDiff = maxOf(normRecord.length, normQuery.length) -
+                          minOf(normRecord.length, normQuery.length)
+            if (normRecord.length == 0 || lenDiff > 0.3 * normRecord.length) return 0.0
+            val maxLen = maxOf(normRecord.length, normQuery.length)
+            val dist = levenshtein.apply(normRecord, normQuery)
+            return (maxLen - dist).toDouble() / maxLen.toDouble()
         }
 
         val recParts = normRecord.split("@", limit = 2)
@@ -368,52 +388,55 @@ class MultiFieldSearchEngine(
 
         if (query.isBlank()) return emptyList()
 
-        val queryTokens = query.trim().split(Regex("\\s+"))
-
         return records.mapNotNull { record ->
             val fieldMap = recordToFields(record)
-            val fieldScores = mutableMapOf<String, Double>()
-            val weightedScores = mutableMapOf<String, Double>()
+            val finalScores = mutableMapOf<String, Double>()  // raw 0..1 confidence per field
 
             for (fieldConfig in fields) {
                 val recordValue = fieldMap[fieldConfig.fieldName]
                 if (recordValue.isNullOrBlank()) continue
 
-                // Score full query AND individual tokens, take the best
-                val fullQueryScore = fieldConfig.matcher.score(recordValue, query)
-                val bestTokenScore = queryTokens.maxOfOrNull { token ->
-                    fieldConfig.matcher.score(recordValue, token)
-                } ?: 0.0
+                // Score the WHOLE query against this field. Each FieldMatcher is
+                // responsible for its own tokenization strategy (NameFieldMatcher
+                // already matches per-token internally and averages). Do NOT also
+                // take max() over individual query tokens here — doing so lets a
+                // single perfect token (e.g. "shalu") wipe out a multi-word query's
+                // intent, making "Shalu Rathore" tie with "Shalu Verma" at 1.0.
+                val rawScore = fieldConfig.matcher.score(recordValue, query)
 
-                val rawScore = maxOf(fullQueryScore, bestTokenScore)
-
-                // Per-field threshold gate
-                val finalScore = if (rawScore >= fieldConfig.threshold) rawScore else 0.0
-
-                fieldScores[fieldConfig.fieldName] = finalScore
-
-                // Apply weight (normalized so max weight = 1.0)
-                weightedScores[fieldConfig.fieldName] = finalScore * (fieldConfig.weight / maxWeight)
+                // Per-field threshold gate: weak/noisy matches are zeroed.
+                finalScores[fieldConfig.fieldName] =
+                    if (rawScore >= fieldConfig.threshold) rawScore else 0.0
             }
 
-            // ── best_fields + tie_breaker aggregation ──
-            if (weightedScores.isEmpty() || weightedScores.values.all { it == 0.0 }) {
+            if (finalScores.isEmpty() || finalScores.values.all { it == 0.0 }) {
                 return@mapNotNull null
             }
 
-            val sortedScores = weightedScores.entries.sortedByDescending { it.value }
-            val bestEntry = sortedScores.first()
-            val bestScore = bestEntry.value
-            val otherScoresSum = sortedScores.drop(1).sumOf { it.value }
+            // ── best_fields + tie_breaker aggregation ──
+            // The record's primary confidence is the RAW score of its single
+            // best-matching field. Weights do NOT cap the best field (that would
+            // bury a lone perfect email/city match, e.g. "outlook"); instead,
+            // weights act as CONFIRMATION bonuses for the OTHER matching fields,
+            // so a query that agrees on multiple (weighted) fields is nudged up.
+            val bestEntry = finalScores.entries.maxByOrNull { it.value }!!
+            val bestRaw = bestEntry.value
+            val bestField = bestEntry.key
 
-            val totalScore = bestScore + tieBreaker * otherScoresSum
+            val otherWeightedSum = finalScores.entries
+                .filter { it.key != bestField }
+                .sumOf {
+                    it.value * (fields.first { f -> f.fieldName == it.key }.weight / maxWeight)
+                }
+
+            val totalScore = bestRaw + tieBreaker * otherWeightedSum
 
             if (totalScore >= overallThreshold) {
                 SearchResult(
                     record = record,
                     totalScore = totalScore,
-                    fieldScores = fieldScores,
-                    bestField = bestEntry.key
+                    fieldScores = finalScores.toMap(),
+                    bestField = bestField
                 )
             } else null
         }
@@ -437,7 +460,7 @@ object CustomerSearchEngine {
                 fieldName = "name",
                 matcher = NameFieldMatcher(),
                 weight = 5.0,       // Name is king — most searches are by name
-                threshold = 0.4
+                threshold = 0.6     // tightened: blocks unrelated words leaking in via name JW
             ),
             SearchFieldConfig(
                 fieldName = "phone",
@@ -455,7 +478,8 @@ object CustomerSearchEngine {
                 fieldName = "city",
                 matcher = GenericFieldMatcher(fieldName = "city"),
                 weight = 1.0,       // Low weight: city is a filter, not a search key
-                threshold = 0.5
+                threshold = 0.7     // raised: Jaro's (m-t/2)/m term alone yields ~0.5
+                                    // for unrelated text vs a short city name
             ),
             SearchFieldConfig(
                 fieldName = "customerId",
@@ -464,7 +488,7 @@ object CustomerSearchEngine {
                 threshold = 0.7     // Must be a strong match
             )
         ),
-        overallThreshold = 0.30,
+        overallThreshold = 0.40,
         tieBreaker = 0.3
     )
 

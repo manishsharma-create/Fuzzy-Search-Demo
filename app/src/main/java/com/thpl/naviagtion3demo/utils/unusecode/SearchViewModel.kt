@@ -1,5 +1,6 @@
-package com.thpl.naviagtion3demo
+package com.thpl.naviagtion3demo.utils.unusecode
 
+/*
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,7 +12,6 @@ import com.thpl.naviagtion3demo.utils.ApacheMetaphone
 import com.thpl.naviagtion3demo.utils.ApacheSoundex
 import com.thpl.naviagtion3demo.utils.CharMatchAlgo
 import com.thpl.naviagtion3demo.utils.FuzzyAlgorithm
-import com.thpl.naviagtion3demo.utils.FuzzyLogic
 import com.thpl.naviagtion3demo.utils.JaroWinklerAlgo
 import com.thpl.naviagtion3demo.utils.LevenshteinAlgo
 import com.thpl.naviagtion3demo.utils.SoundexAlgo
@@ -19,7 +19,6 @@ import com.thpl.naviagtion3demo.utils.TrigramAlgo
 import com.thpl.naviagtion3demo.utils.UnorderedContainsAlgo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -46,7 +45,8 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     // 3. The Filtered Result (The "Fuzzy" Logic)
     // We combine the DB list and the Search Text.
     // If the text changes, we re-run the fuzzy filter.
-  /*  val filteredUsers: StateFlow<List<User>> = _users.combine(_searchText) { users, text ->
+  */
+/*  val filteredUsers: StateFlow<List<User>> = _users.combine(_searchText) { users, text ->
         if (text.isBlank()) {
             users
         } else {
@@ -62,7 +62,8 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
         emptyList()
-    )*/
+    )*//*
+
 
 
     // In SearchViewModel.kt
@@ -129,5 +130,6 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
     }
 }
 
+*/
 
 

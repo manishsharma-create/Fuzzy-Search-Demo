@@ -1,6 +1,7 @@
-package com.thpl.naviagtion3demo.utils
+package com.thpl.naviagtion3demo.utils.unusecode
 
 
+/*
 object FuzzyLogic {
 
     // Returns true if the name matches the query with roughly 40% similarity allowance
@@ -40,4 +41,4 @@ object FuzzyLogic {
         }
         return cost[lhsLength]
     }
-}
+}*/

@@ -36,13 +36,13 @@ class CustomerSearchEngineTest {
     // Expected: CUST-001 (Shalu Rathore)
     // Actual: CUST-008 (Shalu Verma)
     // Impact: Users may see less relevant results before the exact or closest match, which can affect search accuracy and user experience.
-   /* @Test
+   @Test
     fun typoNameMatch() {
         val result = search("Shalu Rathor")
 
         assertTrue(result.isNotEmpty())
         assertEquals("CUST-001", result.first().record.id)
-    }*/
+    }
 
     @Test
     fun phoneSuffixMatch() {
@@ -172,13 +172,13 @@ class CustomerSearchEngineTest {
     }
 
     // Issue: Incorrect ranking in search results.mainly due to name ranking real result come at 10th position
-   /* @Test
+   @Test
     fun outlookSearch() {
         val result = search("outlook")
 
         assertTrue(result.isNotEmpty())
         assertEquals("CUST-003", result.first().record.id)
-    }*/
+    }
 
     @Test
     fun partialEmailSearch() {
@@ -238,13 +238,13 @@ class CustomerSearchEngineTest {
     }
 
     // same ranking issue accepted result comes on 3 position instead of 1
- /*   @Test
+ @Test
     fun exactVikasShouldRankAboveVariants() {
         val result = search("Vikas Sharma")
 
         assertTrue(result.isNotEmpty())
         assertEquals("CUST-003", result.first().record.id)
-    }*/
+    }
 
     @Test
     fun cityAndNameCombinationShouldPreferBothMatches() {
@@ -280,12 +280,12 @@ class CustomerSearchEngineTest {
 
     // Ideally, this query should return no results. The current overallThreshold (0.30)
     // may be too low, causing unrelated records to pass the relevance filter.
-//    @Test
-//    fun randomTextQuery() {
-//        val result = search("abcdefghxyz")
-//
-//        assertTrue(result.isEmpty())
-//    }
+@Test
+    fun randomTextQuery() {
+        val result = search("abcdefghxyz")
+
+        assertTrue(result.isEmpty())
+    }
 
     @Test
     fun veryShortPhoneQuery() {
